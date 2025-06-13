@@ -2,7 +2,7 @@ package ru.ivanov.productservice.service.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.ivanov.productservice.exception.BadRequestException;
+import ru.ivanov.productservice.exception.ResourceNotFoundException;
 import ru.ivanov.productservice.mapper.ProductMapper;
 import ru.ivanov.productservice.model.dto.ProductDto;
 import ru.ivanov.productservice.model.dto.request.CreateProductRequest;
@@ -66,6 +66,6 @@ public class ProductServiceImpl implements ProductService {
 
     private Product findById(UUID productId) {
         return productRepository.findById(productId)
-                .orElseThrow(() -> new BadRequestException(PRODUCT_NOT_FOUND_WITH_ID.formatted(productId)));
+                .orElseThrow(() -> new ResourceNotFoundException(PRODUCT_NOT_FOUND_WITH_ID.formatted(productId)));
     }
 }

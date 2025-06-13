@@ -1,5 +1,6 @@
 package ru.ivanov.productservice.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class ProductController {
     }
 
     @PostMapping("create")
-    public ResponseEntity<ProductDto> createProduct(@RequestBody CreateProductRequest request) {
+    public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody CreateProductRequest request) {
         ProductDto product = productService.createProduct(request);
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -52,8 +53,9 @@ public class ProductController {
     }
 
     @PutMapping("{productId}/update")
-    public ResponseEntity<Void> updateProduct(@PathVariable("productId") UUID productId,
-                                                    @RequestBody UpdateProductRequest request
+    public ResponseEntity<Void> updateProduct(
+            @PathVariable("productId") UUID productId,
+            @Valid @RequestBody UpdateProductRequest request
     ) {
         productService.updateProduct(productId, request);
         return ResponseEntity.noContent().build();
