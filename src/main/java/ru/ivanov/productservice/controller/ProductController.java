@@ -45,7 +45,7 @@ public class ProductController {
     }
 
     @GetMapping("{productId}")
-    public ResponseEntity<ProductDto> getProductById(@PathVariable("productId")UUID productId) {
+    public ResponseEntity<ProductDto> getProduct(@PathVariable("productId")UUID productId) {
         ProductDto product = productService.getProductById(productId);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
