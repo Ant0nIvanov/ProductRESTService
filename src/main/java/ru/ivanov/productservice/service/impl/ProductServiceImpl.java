@@ -27,6 +27,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public ProductDto createProduct(CreateProductRequest request) {
         Product product = new Product(
                 request.title(),
@@ -38,6 +39,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProductDto> getAllProducts() {
         return productRepository.findAll().stream()
                 .map(productMapper::toDto)
@@ -45,6 +47,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductDto getProductById(UUID productId) {
         Product product = findById(productId);
         return productMapper.toDto(product);
@@ -56,11 +59,15 @@ public class ProductServiceImpl implements ProductService {
         Product product = findById(productId);
         product.setTitle(request.title());
         product.setDetails(request.details());
-        productRepository.flush();
+        productRepository.save(product);
     }
 
     @Override
+    @Transactional
     public void deleteProduct(UUID productId) {
+        if (!productRepository.existsById(productId)) {
+            throw new ResourceNotFoundException(PRODUCT_NOT_FOUND_WITH_ID.formatted(productId));
+        }
         productRepository.deleteById(productId);
     }
 
