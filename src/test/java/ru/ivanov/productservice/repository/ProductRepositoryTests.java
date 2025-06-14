@@ -18,11 +18,11 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 public class ProductRepositoryTests {
     @Autowired
-    private ProductRepository productRepository;
+    private ProductRepository repositoryUnderTest;
 
     @BeforeEach
     public void setUp() {
-        productRepository.deleteAll();
+        repositoryUnderTest.deleteAll();
     }
 
     @Test
@@ -32,7 +32,7 @@ public class ProductRepositoryTests {
         Product productToSave = DataUtils.getProductMilkTransient();
 
         //when
-        Product savedProduct = productRepository.save(productToSave);
+        Product savedProduct = repositoryUnderTest.save(productToSave);
 
         //then
         assertThat(savedProduct).isNotNull();
@@ -46,10 +46,10 @@ public class ProductRepositoryTests {
     public void givenProductSaved_whenGetById_thenProductIsReturned() {
         //given
         Product productToSave = DataUtils.getProductMilkTransient();
-        Product savedProduct = productRepository.save(productToSave);
+        Product savedProduct = repositoryUnderTest.save(productToSave);
 
         //when
-        Product obtainedProduct = productRepository.findById(savedProduct.getId()).orElse(null);
+        Product obtainedProduct = repositoryUnderTest.findById(savedProduct.getId()).orElse(null);
 
         //then
         assertNotNull(obtainedProduct);
@@ -64,7 +64,7 @@ public class ProductRepositoryTests {
         //given
 
         //when
-        Product obtainedProduct = productRepository.findById(UUID.randomUUID()).orElse(null);
+        Product obtainedProduct = repositoryUnderTest.findById(UUID.randomUUID()).orElse(null);
         //then
         assertThat(obtainedProduct).isNull();
     }
@@ -75,7 +75,7 @@ public class ProductRepositoryTests {
         //given
 
         //when
-        List<Product> obtainedProducts = productRepository.findAll();
+        List<Product> obtainedProducts = repositoryUnderTest.findAll();
 
         //then
         assertThat(CollectionUtils.isEmpty(obtainedProducts)).isTrue();
@@ -86,10 +86,10 @@ public class ProductRepositoryTests {
     public void givenOneProductIsExisted_whenGetAll_thenReturnListWithOneProduct() {
         //given
         Product productButterToSave = DataUtils.getProductButterTransient();
-        Product savedProduct = productRepository.save(productButterToSave);
+        Product savedProduct = repositoryUnderTest.save(productButterToSave);
 
         //when
-        List<Product> obtainedProducts = productRepository.findAll();
+        List<Product> obtainedProducts = repositoryUnderTest.findAll();
 
         //then
         assertThat(CollectionUtils.isEmpty(obtainedProducts)).isFalse();
@@ -104,12 +104,12 @@ public class ProductRepositoryTests {
         Product productMilkToSave = DataUtils.getProductMilkTransient();
         Product productButterToSave = DataUtils.getProductButterTransient();
         Product productCottageToSave = DataUtils.getProductCottageTransient();
-        Product savedMilk = productRepository.save(productMilkToSave);
-        Product savedButter = productRepository.save(productButterToSave);
-        Product savedCottage = productRepository.save(productCottageToSave);
+        Product savedMilk = repositoryUnderTest.save(productMilkToSave);
+        Product savedButter = repositoryUnderTest.save(productButterToSave);
+        Product savedCottage = repositoryUnderTest.save(productCottageToSave);
 
         //when
-        List<Product> obtainedProducts = productRepository.findAll();
+        List<Product> obtainedProducts = repositoryUnderTest.findAll();
 
         //then
         assertThat(CollectionUtils.isEmpty(obtainedProducts)).isFalse();
@@ -125,14 +125,14 @@ public class ProductRepositoryTests {
         //given
         String updatedDetails = "Updated product details";
         Product productToSave = DataUtils.getProductMilkTransient();
-        Product savedProduct = productRepository.save(productToSave);
+        Product savedProduct = repositoryUnderTest.save(productToSave);
 
         //when
-        Product productToUpdate = productRepository.findById(savedProduct.getId()).orElse(null);
+        Product productToUpdate = repositoryUnderTest.findById(savedProduct.getId()).orElse(null);
         assertNotNull(productToUpdate);
 
         productToUpdate.setDetails(updatedDetails);
-        Product updatedProduct = productRepository.save(productToUpdate);
+        Product updatedProduct = repositoryUnderTest.save(productToUpdate);
 
         //then
         assertThat(updatedProduct).isNotNull();
@@ -146,10 +146,10 @@ public class ProductRepositoryTests {
     public void givenExistentProductId_whenExistsById_thenReturnTrue() {
         //given
         Product product = DataUtils.getProductCottageTransient();
-        Product savedProduct = productRepository.save(product);
+        Product savedProduct = repositoryUnderTest.save(product);
 
         //when
-        boolean isProductExists = productRepository.existsById(savedProduct.getId());
+        boolean isProductExists = repositoryUnderTest.existsById(savedProduct.getId());
 
         // then
         assertThat(isProductExists).isTrue();
@@ -162,7 +162,7 @@ public class ProductRepositoryTests {
         UUID notExistentId = UUID.randomUUID();
 
         //when
-        boolean isProductExists = productRepository.existsById(notExistentId);
+        boolean isProductExists = repositoryUnderTest.existsById(notExistentId);
 
         //then
         assertThat(isProductExists).isFalse();
@@ -174,13 +174,13 @@ public class ProductRepositoryTests {
     public void givenProductSaved_whenDeleteById_thenProductIsRemovedFromDB() {
         //given
         Product productToSave = DataUtils.getProductMilkTransient();
-        Product savedProduct = productRepository.save(productToSave);
+        Product savedProduct = repositoryUnderTest.save(productToSave);
 
         //when
-        productRepository.deleteById(savedProduct.getId());
+        repositoryUnderTest.deleteById(savedProduct.getId());
 
         //then
-        Product obtainedProduct = productRepository.findById(savedProduct.getId()).orElse(null);
+        Product obtainedProduct = repositoryUnderTest.findById(savedProduct.getId()).orElse(null);
         assertThat(obtainedProduct).isNull();
     }
 }
