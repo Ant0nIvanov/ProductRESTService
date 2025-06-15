@@ -1,6 +1,7 @@
 package ru.ivanov.productservice.controller;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -8,10 +9,10 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import ru.ivanov.productservice.model.dto.ProductDto;
 import ru.ivanov.productservice.model.dto.request.CreateProductRequest;
 import ru.ivanov.productservice.model.dto.request.UpdateProductRequest;
+import ru.ivanov.productservice.model.dto.response.PagedResponse;
 import ru.ivanov.productservice.service.ProductService;
 
 import java.net.URI;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -37,11 +38,11 @@ public class ProductRestController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductDto>> getAllProducts() {
-        List<ProductDto> products = productService.getAllProducts();
+    public ResponseEntity<PagedResponse<ProductDto>> getAllProductsPaginated(Pageable pageable) {
+        PagedResponse<ProductDto> page = productService.getAllProductsPaginated(pageable);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(products);
+                .body(page);
     }
 
     @GetMapping("{productId}")
