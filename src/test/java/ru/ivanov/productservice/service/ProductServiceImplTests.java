@@ -15,7 +15,7 @@ import ru.ivanov.productservice.model.dto.request.UpdateProductRequest;
 import ru.ivanov.productservice.model.entity.Product;
 import ru.ivanov.productservice.repository.ProductRepository;
 import ru.ivanov.productservice.service.impl.ProductServiceImpl;
-import ru.ivanov.productservice.util.DataUtils;
+import ru.ivanov.productservice.util.TestUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -40,9 +40,9 @@ public class ProductServiceImplTests {
     @DisplayName("Test save product functionality")
     public void givenCreateProductRequest_whenCreateProduct_thenRepositoryIsCalled() {
         //given
-        CreateProductRequest request = DataUtils.getCreateProductMilkRequest();
-        Product savedProduct = DataUtils.getProductMilkPersisted();
-        ProductDto expectedDto = DataUtils.getProductMilkDto();
+        CreateProductRequest request = TestUtils.getCreateProductMilkRequest();
+        Product savedProduct = TestUtils.getProductMilkPersisted();
+        ProductDto expectedDto = TestUtils.getProductMilkDto();
 
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
         when(productMapper.toDto(any(Product.class))).thenReturn(expectedDto);
@@ -63,9 +63,9 @@ public class ProductServiceImplTests {
     @DisplayName("Test get product by id functionality with existent product id")
     public void givenExistentProductId_whenGetProductById_thenProductDtoIsReturned() {
         //given
-        UUID existentProductId = DataUtils.PRODUCT_MILK_ID;
-        Product savedProduct = DataUtils.getProductMilkPersisted();
-        ProductDto expectedDto = DataUtils.getProductMilkDto();
+        UUID existentProductId = TestUtils.PRODUCT_MILK_ID;
+        Product savedProduct = TestUtils.getProductMilkPersisted();
+        ProductDto expectedDto = TestUtils.getProductMilkDto();
         when(productRepository.findById(any(UUID.class))).thenReturn(Optional.of(savedProduct));
         when(productMapper.toDto(any(Product.class))).thenReturn(expectedDto);
 
@@ -111,8 +111,8 @@ public class ProductServiceImplTests {
     @DisplayName("Test get all products functionality when only one product is existed")
     public void givenOneProductExisted_whenGetAllProducts_thenReturnListWithOneProductDto() {
         //given
-        Product savedProduct = DataUtils.getProductButterPersisted();
-        ProductDto productDto = DataUtils.getProductButterDto();
+        Product savedProduct = TestUtils.getProductButterPersisted();
+        ProductDto productDto = TestUtils.getProductButterDto();
         when(productRepository.findAll()).thenReturn(List.of(savedProduct));
         when(productMapper.toDto(any(Product.class))).thenReturn(productDto);
 
@@ -132,13 +132,13 @@ public class ProductServiceImplTests {
     @DisplayName("Test get all products functionality when many products are existed")
     public void givenThreeProductsExisted_whenGetAllProducts_thenThreeProductDtosAreReturned() {
         //given
-        Product savedProductMilk = DataUtils.getProductMilkPersisted();
-        Product savedProductButter = DataUtils.getProductButterPersisted();
-        Product savedProductCottage = DataUtils.getProductCottagePersisted();
+        Product savedProductMilk = TestUtils.getProductMilkPersisted();
+        Product savedProductButter = TestUtils.getProductButterPersisted();
+        Product savedProductCottage = TestUtils.getProductCottagePersisted();
         List<Product> savedProducts = List.of(savedProductMilk, savedProductButter, savedProductCottage);
-        ProductDto milkDto = DataUtils.getProductMilkDto();
-        ProductDto butterDto = DataUtils.getProductButterDto();
-        ProductDto cottageDto = DataUtils.getProductCottageDto();
+        ProductDto milkDto = TestUtils.getProductMilkDto();
+        ProductDto butterDto = TestUtils.getProductButterDto();
+        ProductDto cottageDto = TestUtils.getProductCottageDto();
         List<ProductDto> expectedDtos = List.of(milkDto, butterDto, cottageDto);
 
         when(productRepository.findAll()).thenReturn(savedProducts);
@@ -164,9 +164,9 @@ public class ProductServiceImplTests {
     @DisplayName("Test update product functionality with existent product id")
     public void givenUpdateProductRequestAndExistentProductId_whenUpdateProduct_thenRepositoryIsCalled() {
         //given
-        UUID productId = DataUtils.PRODUCT_MILK_ID;
-        UpdateProductRequest request = DataUtils.getUpdateProductMilkRequest();
-        Product productToUpdate = DataUtils.getProductMilkPersisted();
+        UUID productId = TestUtils.PRODUCT_MILK_ID;
+        UpdateProductRequest request = TestUtils.getUpdateProductMilkRequest();
+        Product productToUpdate = TestUtils.getProductMilkPersisted();
         when(productRepository.findById(productId)).thenReturn(Optional.of(productToUpdate));
 
         //when
@@ -183,7 +183,7 @@ public class ProductServiceImplTests {
     public void givenUpdateProductRequestAndNotExistentProductId_whenUpdateProduct_thenResourceNotFoundExceptionIsThrown() {
         //given
         UUID notExistentProductId = UUID.randomUUID();
-        UpdateProductRequest request = DataUtils.getUpdateProductMilkRequest();
+        UpdateProductRequest request = TestUtils.getUpdateProductMilkRequest();
 
         //when and then
         assertThatThrownBy(() -> serviceUnderTest.updateProduct(notExistentProductId, request))
@@ -197,7 +197,7 @@ public class ProductServiceImplTests {
     @DisplayName("Test delete product functionality with existent product id")
     public void givenExistentProductId_whenDeleteProduct_thenRepositoryDeleteByIdMethodIsCalled() {
         //given
-        UUID existentId = DataUtils.PRODUCT_BUTTER_ID;
+        UUID existentId = TestUtils.PRODUCT_BUTTER_ID;
         when(productRepository.existsById(any(UUID.class))).thenReturn(true);
 
         //when

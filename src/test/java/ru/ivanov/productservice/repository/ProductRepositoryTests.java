@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.util.CollectionUtils;
 import ru.ivanov.productservice.model.entity.Product;
-import ru.ivanov.productservice.util.DataUtils;
+import ru.ivanov.productservice.util.TestUtils;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +29,7 @@ public class ProductRepositoryTests {
     @DisplayName("Test save product functionality")
     public void givenProductObject_whenSave_thenProductIsSaved() {
         //given
-        Product productToSave = DataUtils.getProductMilkTransient();
+        Product productToSave = TestUtils.getProductMilkTransient();
 
         //when
         Product savedProduct = repositoryUnderTest.save(productToSave);
@@ -45,7 +45,7 @@ public class ProductRepositoryTests {
     @DisplayName("Test get product by id functionality with existent product id")
     public void givenProductSaved_whenGetById_thenProductIsReturned() {
         //given
-        Product productToSave = DataUtils.getProductMilkTransient();
+        Product productToSave = TestUtils.getProductMilkTransient();
         Product savedProduct = repositoryUnderTest.save(productToSave);
 
         //when
@@ -85,7 +85,7 @@ public class ProductRepositoryTests {
     @DisplayName("Test get all products functionality when only one product is existed")
     public void givenOneProductIsExisted_whenGetAll_thenReturnListWithOneProduct() {
         //given
-        Product productButterToSave = DataUtils.getProductButterTransient();
+        Product productButterToSave = TestUtils.getProductButterTransient();
         Product savedProduct = repositoryUnderTest.save(productButterToSave);
 
         //when
@@ -101,9 +101,9 @@ public class ProductRepositoryTests {
     @DisplayName("Test get all products functionality when many products are existed")
     public void givenThreeProductsAreExisted_whenGetAll_thenThreeProductsAreReturned() {
         //given
-        Product productMilkToSave = DataUtils.getProductMilkTransient();
-        Product productButterToSave = DataUtils.getProductButterTransient();
-        Product productCottageToSave = DataUtils.getProductCottageTransient();
+        Product productMilkToSave = TestUtils.getProductMilkTransient();
+        Product productButterToSave = TestUtils.getProductButterTransient();
+        Product productCottageToSave = TestUtils.getProductCottageTransient();
         Product savedMilk = repositoryUnderTest.save(productMilkToSave);
         Product savedButter = repositoryUnderTest.save(productButterToSave);
         Product savedCottage = repositoryUnderTest.save(productCottageToSave);
@@ -124,7 +124,7 @@ public class ProductRepositoryTests {
     public void givenProductToUpdate_whenSave_thenDetailsIsChanged() {
         //given
         String updatedDetails = "Updated product details";
-        Product productToSave = DataUtils.getProductMilkTransient();
+        Product productToSave = TestUtils.getProductMilkTransient();
         Product savedProduct = repositoryUnderTest.save(productToSave);
 
         //when
@@ -145,7 +145,7 @@ public class ProductRepositoryTests {
     @DisplayName("Test product is existed with existent product id")
     public void givenExistentProductId_whenExistsById_thenReturnTrue() {
         //given
-        Product product = DataUtils.getProductCottageTransient();
+        Product product = TestUtils.getProductCottageTransient();
         Product savedProduct = repositoryUnderTest.save(product);
 
         //when
@@ -173,7 +173,7 @@ public class ProductRepositoryTests {
     @DisplayName("Test delete product by id functionality")
     public void givenProductSaved_whenDeleteById_thenProductIsRemovedFromDB() {
         //given
-        Product productToSave = DataUtils.getProductMilkTransient();
+        Product productToSave = TestUtils.getProductMilkTransient();
         Product savedProduct = repositoryUnderTest.save(productToSave);
 
         //when

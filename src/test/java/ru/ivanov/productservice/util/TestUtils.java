@@ -7,7 +7,7 @@ import ru.ivanov.productservice.model.entity.Product;
 
 import java.util.UUID;
 
-public class DataUtils {
+public class TestUtils {
     public static final UUID PRODUCT_MILK_ID = UUID.fromString("91efd04b-71b0-4da0-9c51-0eb94e0a63ca");
     public static final UUID PRODUCT_BUTTER_ID = UUID.fromString("52c6d5b6-b73d-415a-bcf4-a4e59d520015");
     public static final UUID PRODUCT_COTTAGE_ID = UUID.fromString("b8477e47-d4f6-4d42-8cc2-7b734cdb1d1e");

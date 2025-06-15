@@ -16,19 +16,19 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("api/v1/products")
-public class ProductController {
+public class ProductRestController {
     private final ProductService productService;
 
-    public ProductController(ProductService productService) {
+    public ProductRestController(ProductService productService) {
         this.productService = productService;
     }
 
-    @PostMapping("create")
+    @PostMapping
     public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody CreateProductRequest request) {
         ProductDto product = productService.createProduct(request);
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
-                .path("{productId}")
+                .path("/{productId}")
                 .buildAndExpand(product.id())
                 .toUri();
         return ResponseEntity.created(location)
@@ -52,7 +52,7 @@ public class ProductController {
                 .body(product);
     }
 
-    @PutMapping("{productId}/update")
+    @PutMapping("{productId}")
     public ResponseEntity<Void> updateProduct(
             @PathVariable("productId") UUID productId,
             @Valid @RequestBody UpdateProductRequest request
@@ -61,7 +61,7 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("{productId}/delete")
+    @DeleteMapping("{productId}")
     public ResponseEntity<Void> deleteProduct(@PathVariable("productId") UUID productId) {
         productService.deleteProduct(productId);
         return ResponseEntity.noContent().build();
