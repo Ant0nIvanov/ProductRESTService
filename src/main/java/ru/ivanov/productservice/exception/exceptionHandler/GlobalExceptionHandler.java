@@ -1,7 +1,6 @@
 package ru.ivanov.productservice.exception.exceptionHandler;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -12,6 +11,8 @@ import ru.ivanov.productservice.model.dto.response.ErrorResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static org.springframework.http.HttpStatus.*;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,11 +25,11 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 request.getRequestURI(),
                 ex.getMessage(),
-                HttpStatus.NOT_FOUND.value(),
+                NOT_FOUND.value(),
                 LocalDateTime.now()
         );
         return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
+                .status(NOT_FOUND)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(errorResponse);
     }
@@ -52,11 +53,28 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 request.getRequestURI(),
                 detailedMessage,
-                HttpStatus.BAD_REQUEST.value(),
+                BAD_REQUEST.value(),
                 LocalDateTime.now()
         );
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(BAD_REQUEST)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException ex,
+            HttpServletRequest request
+    ) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                request.getRequestURI(),
+                ex.getMessage(),
+                BAD_REQUEST.value(),
+                LocalDateTime.now()
+        );
+        return ResponseEntity
+                .status(BAD_REQUEST)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(errorResponse);
     }
@@ -69,11 +87,11 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 request.getRequestURI(),
                 ex.getMessage(),
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                INTERNAL_SERVER_ERROR.value(),
                 LocalDateTime.now()
         );
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .status(INTERNAL_SERVER_ERROR)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(errorResponse);
     }

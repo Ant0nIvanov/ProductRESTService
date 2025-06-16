@@ -1,7 +1,6 @@
 package ru.ivanov.productservice.controller;
 
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,15 +37,18 @@ public class ProductRestController {
     }
 
     @GetMapping
-    public ResponseEntity<PagedResponse<ProductDto>> getAllProductsPaginated(Pageable pageable) {
-        PagedResponse<ProductDto> page = productService.getAllProductsPaginated(pageable);
+    public ResponseEntity<PagedResponse<ProductDto>> getAllProductsPaginated(
+            @RequestParam(name = "page", required = false, defaultValue = "0") int pageNumber,
+            @RequestParam(name = "size", required = false, defaultValue = "10")  int pageSize
+    ) {
+        PagedResponse<ProductDto> page = productService.getAllProductsPaginated(pageNumber, pageSize);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(page);
     }
 
     @GetMapping("{productId}")
-    public ResponseEntity<ProductDto> getProduct(@PathVariable("productId")UUID productId) {
+    public ResponseEntity<ProductDto> getProduct(@PathVariable("productId") UUID productId) {
         ProductDto product = productService.getProductById(productId);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)

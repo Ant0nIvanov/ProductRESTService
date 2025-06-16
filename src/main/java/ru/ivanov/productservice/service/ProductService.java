@@ -12,7 +12,7 @@ public interface ProductService {
 
     ProductDto createProduct(CreateProductRequest request);
 
-    PagedResponse<ProductDto> getAllProductsPaginated(Pageable pageable);
+    PagedResponse<ProductDto> getAllProductsPaginated(int pageNumber, int pageSize);
 
     ProductDto getProductById(UUID productId);
 

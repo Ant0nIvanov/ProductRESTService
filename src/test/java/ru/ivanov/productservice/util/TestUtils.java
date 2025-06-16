@@ -50,16 +50,21 @@ public class TestUtils {
         return new UpdateProductRequest("Milk", "Ordinary milk");
     }
 
-    public static ProductDto getProductMilkDto() {
+    public static Product getUpdatedProductMilk() {
+        Product productToUpdateByUpdateProductMilkRequest = getProductMilkPersisted();
+        productToUpdateByUpdateProductMilkRequest.setDetails("Ordinary milk");
+        return productToUpdateByUpdateProductMilkRequest;
+    }
+
+    public static ProductDto getProductMilkPersistedDto() {
         return new ProductDto(PRODUCT_MILK_ID, "Milk", "Best milk in the world");
     }
 
-    public static ProductDto getProductButterDto() {
+    public static ProductDto getProductButterPersistedDto() {
         return new ProductDto(PRODUCT_BUTTER_ID, "Butter", "Best butter in the world");
     }
 
-    public static ProductDto getProductCottageDto() {
+    public static ProductDto getProductCottagePersistedDto() {
         return new ProductDto(PRODUCT_COTTAGE_ID, "Cottage", "Best cottage in the world");
     }
-
 }

@@ -5,16 +5,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.util.CollectionUtils;
 import ru.ivanov.productservice.model.entity.Product;
 import ru.ivanov.productservice.util.TestUtils;
 
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ActiveProfiles("test")
 @DataJpaTest
@@ -28,140 +29,196 @@ public class ProductRepositoryTests {
     }
 
     @Test
-    @DisplayName("Test save product functionality")
-    public void givenProductObject_whenSave_thenProductIsSaved() {
+    @DisplayName("Should save product and generate id when saving product")
+    public void givenProduct_whenSave_thenSaveProduct() {
         //given
-        Product productToSave = TestUtils.getProductMilkTransient();
+        Product productTransient = TestUtils.getProductMilkTransient();
 
         //when
-        Product savedProduct = repositoryUnderTest.save(productToSave);
+        Product productPersisted = repositoryUnderTest.save(productTransient);
 
         //then
-        assertThat(savedProduct).isNotNull();
-        assertThat(savedProduct.getId()).isNotNull();
-        assertThat(savedProduct.getTitle()).isEqualTo(productToSave.getTitle());
-        assertThat(savedProduct.getDetails()).isEqualTo(productToSave.getDetails());
+        assertThat(productPersisted).isNotNull();
+        assertThat(productPersisted.getId()).isNotNull();
+        assertThat(productPersisted.getId()).isInstanceOf(UUID.class);
+        assertThat(productPersisted.getTitle()).isEqualTo(productTransient.getTitle());
+        assertThat(productPersisted.getDetails()).isEqualTo(productTransient.getDetails());
+
+        Product obtainedProduct = repositoryUnderTest.findById(productPersisted.getId()).orElse(null);
+        assertThat(obtainedProduct).isNotNull();
+        assertThat(obtainedProduct).usingRecursiveComparison().isEqualTo(productPersisted);
     }
 
     @Test
-    @DisplayName("Test get product by id functionality with existent product id")
-    public void givenProductSaved_whenGetById_thenProductIsReturned() {
+    @DisplayName("Should return Optional with product when existing product id is provided")
+    public void givenExistentProductId_whenFindById_thenReturnProduct() {
         //given
-        Product productToSave = TestUtils.getProductMilkTransient();
-        Product savedProduct = repositoryUnderTest.save(productToSave);
+        Product productTransient = TestUtils.getProductMilkTransient();
+        Product productPersisted = repositoryUnderTest.save(productTransient);
+        UUID existentProductId = productPersisted.getId();
+
+        assertThat(repositoryUnderTest.existsById(existentProductId)).isTrue();
 
         //when
-        Product obtainedProduct = repositoryUnderTest.findById(savedProduct.getId()).orElse(null);
+        Optional<Product> obtainedProduct = repositoryUnderTest.findById(existentProductId);
 
         //then
-        assertNotNull(obtainedProduct);
-        assertThat(obtainedProduct.getId()).isEqualTo(savedProduct.getId());
-        assertThat(obtainedProduct.getTitle()).isEqualTo(savedProduct.getTitle());
-        assertThat(obtainedProduct.getDetails()).isEqualTo(savedProduct.getDetails());
+        assertThat(obtainedProduct).isPresent();
+        assertThat(obtainedProduct).get().usingRecursiveComparison().isEqualTo(productPersisted);
     }
 
     @Test
-    @DisplayName("Test get product by id functionality with not existent product id")
-    public void givenProductIsNotSaved_whenGetById_thenOptionalIsEmpty() {
+    @DisplayName("Should return empty Optional when product is not exist")
+    public void givenNotExistentProductId_whenFindById_thenOptionalIsEmpty() {
         //given
+        UUID notExistentProductId = UUID.randomUUID();
+
+        assertThat(repositoryUnderTest.existsById(notExistentProductId)).isFalse();
 
         //when
-        Product obtainedProduct = repositoryUnderTest.findById(UUID.randomUUID()).orElse(null);
+        Optional<Product> obtainedProduct = repositoryUnderTest.findById(notExistentProductId);
         //then
-        assertThat(obtainedProduct).isNull();
+        assertThat(obtainedProduct).isNotPresent();
     }
 
     @Test
-    @DisplayName("Test get all products functionality when no products are existed")
-    public void givenNoProductsIsExisted_whenGetAll_thenReturnEmptyList() {
+    @DisplayName("Should return empty page when finding all products with pageable from empty repository")
+    public void givenEmptyRepository_whenFindAllWithPageable_thenReturnEmptyPage() {
         //given
+        int pageNumber = 0;
+        int pageSize = 10;
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+
+        assertThat(repositoryUnderTest.count()).isZero();
 
         //when
-        List<Product> obtainedProducts = repositoryUnderTest.findAll();
+        Page<Product> obtainedPage = repositoryUnderTest.findAll(pageable);
 
         //then
-        assertThat(CollectionUtils.isEmpty(obtainedProducts)).isTrue();
+        assertThat(obtainedPage).isNotNull();
+        assertThat(obtainedPage)
+                .returns(true, Page::isEmpty)
+                .returns(pageNumber, Page::getNumber)
+                .returns(pageSize, Page::getSize)
+                .returns(0L, Page::getTotalElements)
+                .returns(0, Page::getTotalPages)
+                .returns(true, Page::isFirst)
+                .returns(true, Page::isLast);
     }
 
     @Test
-    @DisplayName("Test get all products functionality when only one product is existed")
-    public void givenOneProductIsExisted_whenGetAll_thenReturnListWithOneProduct() {
+    @DisplayName("Should return page with single product when finding all products with pageable from DB which contains only one product")
+    public void givenOneProductIsExisted_whenFindAllWithPageable_thenReturnPageWithOneProduct() {
         //given
-        Product productButterToSave = TestUtils.getProductButterTransient();
-        Product savedProduct = repositoryUnderTest.save(productButterToSave);
+        int pageNumber = 0;
+        int pageSize = 10;
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+
+        Product productTransient = TestUtils.getProductButterTransient();
+        Product productPersisted = repositoryUnderTest.save(productTransient);
+
+        assertThat(repositoryUnderTest.count()).isOne();
 
         //when
-        List<Product> obtainedProducts = repositoryUnderTest.findAll();
+        Page<Product> obtainedPage = repositoryUnderTest.findAll(pageable);
 
         //then
-        assertThat(CollectionUtils.isEmpty(obtainedProducts)).isFalse();
-        assertThat(obtainedProducts.size()).isEqualTo(1);
-        assertThat(savedProduct).isIn(obtainedProducts);
+        assertThat(obtainedPage).isNotNull();
+        assertThat(obtainedPage)
+                .returns(false, Page::isEmpty)
+                .returns(pageNumber, Page::getNumber)
+                .returns(pageSize, Page::getSize)
+                .returns(1L, Page::getTotalElements)
+                .returns(1, Page::getTotalPages)
+                .returns(true, Page::isFirst)
+                .returns(true, Page::isLast);
+        assertThat(productPersisted).isIn(obtainedPage.getContent());
     }
 
     @Test
-    @DisplayName("Test get all products functionality when many products are existed")
-    public void givenThreeProductsAreExisted_whenGetAll_thenThreeProductsAreReturned() {
+    @DisplayName("Should return page with many products when finding all products with pageable from DB which contains many products")
+    public void givenThreeProductsAreExisted_whenFindAllWithPageable_thenReturnPageWithThreeProducts() {
         //given
-        Product productMilkToSave = TestUtils.getProductMilkTransient();
-        Product productButterToSave = TestUtils.getProductButterTransient();
-        Product productCottageToSave = TestUtils.getProductCottageTransient();
-        Product savedMilk = repositoryUnderTest.save(productMilkToSave);
-        Product savedButter = repositoryUnderTest.save(productButterToSave);
-        Product savedCottage = repositoryUnderTest.save(productCottageToSave);
+        int pageNumber = 0;
+        int pageSize = 10;
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+
+        Product productMilkTransient = TestUtils.getProductMilkTransient();
+        Product productButterTransient = TestUtils.getProductButterTransient();
+        Product productCottageTransient = TestUtils.getProductCottageTransient();
+        Product productMilkPersisted = repositoryUnderTest.save(productMilkTransient);
+        Product productButterPersisted = repositoryUnderTest.save(productButterTransient);
+        Product productCottagePersisted = repositoryUnderTest.save(productCottageTransient);
 
         //when
-        List<Product> obtainedProducts = repositoryUnderTest.findAll();
+        Page<Product> obtainedPage = repositoryUnderTest.findAll(pageable);
 
         //then
-        assertThat(CollectionUtils.isEmpty(obtainedProducts)).isFalse();
-        assertThat(obtainedProducts.size()).isEqualTo(3);
-        assertThat(savedMilk).isIn(obtainedProducts);
-        assertThat(savedButter).isIn(obtainedProducts);
-        assertThat(savedCottage).isIn(obtainedProducts);
+        assertThat(obtainedPage).isNotNull();
+        assertThat(obtainedPage)
+                .returns(false, Page::isEmpty)
+                .returns(pageNumber, Page::getNumber)
+                .returns(pageSize, Page::getSize)
+                .returns(3L, Page::getTotalElements)
+                .returns(1, Page::getTotalPages)
+                .returns(true, Page::isFirst)
+                .returns(true, Page::isLast);
+        assertThat(productMilkPersisted).isIn(obtainedPage.getContent());
+        assertThat(productButterPersisted).isIn(obtainedPage.getContent());
+        assertThat(productCottagePersisted).isIn(obtainedPage.getContent());
     }
 
     @Test
-    @DisplayName("Test update product functionality")
-    public void givenProductToUpdate_whenSave_thenDetailsIsChanged() {
+    @DisplayName("Should update product when updating product")
+    public void givenExistingProduct_whenSave_thenProductIsUpdated() {
         //given
-        String updatedDetails = "Updated product details";
-        Product productToSave = TestUtils.getProductMilkTransient();
-        Product savedProduct = repositoryUnderTest.save(productToSave);
+        Product productTransient = TestUtils.getProductMilkTransient();
+        Product productPersisted = repositoryUnderTest.save(productTransient);
+        UUID existentProductId = productPersisted.getId();
+
+        String detailsToUpdate = "Updated product details";
+
+        assertThat(repositoryUnderTest.existsById(existentProductId)).isTrue();
 
         //when
-        Product productToUpdate = repositoryUnderTest.findById(savedProduct.getId()).orElse(null);
-        assertNotNull(productToUpdate);
+        Optional<Product> obtainedOptional = repositoryUnderTest.findById(existentProductId);
+        assertThat(obtainedOptional).isPresent();
 
-        productToUpdate.setDetails(updatedDetails);
-        Product updatedProduct = repositoryUnderTest.save(productToUpdate);
+        Product productToUpdate = obtainedOptional.get();
+        productToUpdate.setDetails(detailsToUpdate);
+        Product updatedProductPersisted = repositoryUnderTest.save(productToUpdate);
 
         //then
-        assertThat(updatedProduct).isNotNull();
-        assertThat(updatedProduct.getId()).isEqualTo(productToUpdate.getId());
-        assertThat(updatedProduct.getTitle()).isEqualTo(productToUpdate.getTitle());
-        assertThat(updatedProduct.getDetails()).isEqualTo(updatedDetails);
+        assertThat(updatedProductPersisted).isNotNull();
+        assertThat(updatedProductPersisted.getId()).isEqualTo(productToUpdate.getId());
+        assertThat(updatedProductPersisted.getTitle()).isEqualTo(productToUpdate.getTitle());
+        assertThat(updatedProductPersisted.getDetails()).isEqualTo(detailsToUpdate);
     }
 
     @Test
-    @DisplayName("Test product is existed with existent product id")
+    @DisplayName("Should return true when checking product existence by existent product id")
     public void givenExistentProductId_whenExistsById_thenReturnTrue() {
         //given
-        Product product = TestUtils.getProductCottageTransient();
-        Product savedProduct = repositoryUnderTest.save(product);
+        Product productTransient = TestUtils.getProductCottageTransient();
+        Product productPersisted = repositoryUnderTest.save(productTransient);
+        UUID existentProductId = productPersisted.getId();
+
+        assertThat(repositoryUnderTest.findById(existentProductId)).isPresent();
 
         //when
-        boolean isProductExists = repositoryUnderTest.existsById(savedProduct.getId());
+        boolean isProductExists = repositoryUnderTest.existsById(existentProductId);
 
         // then
         assertThat(isProductExists).isTrue();
     }
 
     @Test
-    @DisplayName("Test product is existed with not existent product id")
+    @DisplayName("Should return false when checking product existence by not existent product id")
     public void givenNotExistentProductId_whenExistsById_thenReturnFalse() {
         // given
         UUID notExistentId = UUID.randomUUID();
+
+        assertThat(repositoryUnderTest.findById(notExistentId)).isNotPresent();
 
         //when
         boolean isProductExists = repositoryUnderTest.existsById(notExistentId);
@@ -170,19 +227,23 @@ public class ProductRepositoryTests {
         assertThat(isProductExists).isFalse();
     }
 
-
     @Test
-    @DisplayName("Test delete product by id functionality")
-    public void givenProductSaved_whenDeleteById_thenProductIsRemovedFromDB() {
+    @DisplayName("Should delete product from DB when deleting with existent product id")
+    public void givenExistentProductId_whenDeleteById_thenProductIsRemovedFromDB() {
         //given
-        Product productToSave = TestUtils.getProductMilkTransient();
-        Product savedProduct = repositoryUnderTest.save(productToSave);
+        Product productTransient = TestUtils.getProductMilkTransient();
+        Product productPersisted = repositoryUnderTest.save(productTransient);
+        UUID existentProductId = productPersisted.getId();
+
+        assertThat(repositoryUnderTest.existsById(existentProductId)).isTrue();
 
         //when
-        repositoryUnderTest.deleteById(savedProduct.getId());
+        repositoryUnderTest.deleteById(existentProductId);
 
         //then
-        Product obtainedProduct = repositoryUnderTest.findById(savedProduct.getId()).orElse(null);
-        assertThat(obtainedProduct).isNull();
+        boolean isProductExists = repositoryUnderTest.existsById(existentProductId);
+        Optional<Product> obtainedProductOptional = repositoryUnderTest.findById(existentProductId);
+        assertThat(obtainedProductOptional).isNotPresent();
+        assertThat(isProductExists).isFalse();
     }
 }

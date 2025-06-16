@@ -19,15 +19,16 @@ import ru.ivanov.productservice.model.entity.Product;
 import ru.ivanov.productservice.repository.ProductRepository;
 import ru.ivanov.productservice.util.TestUtils;
 
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import static java.lang.Boolean.TRUE;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static ru.ivanov.productservice.util.MessageUtils.PRODUCT_NOT_FOUND_WITH_ID;
@@ -52,261 +53,346 @@ public class ItProductRestControllerTests extends AbstractRestControllerBaseTest
     }
 
     @Test
-    @DisplayName("Test create product functionality with valid createProductRequest")
-    public void givenValidCreatProductRequest_whenCreateProduct_thenReturnStatusCreatedAndProductDtoAsBody() throws Exception {
+    @DisplayName("Should return status 201 CREATED and product DTO when creating product with valid request")
+    public void givenValidCreatProductRequest_whenCreateProduct_thenReturnStatusCreatedAndCreatedProductDtoAsBody() throws Exception {
         //given
         CreateProductRequest request = TestUtils.getCreateProductMilkRequest();
 
         //when
-        ResultActions result = mockMvc.perform(post("http://localhost:8080/api/v1/products")
-                .contentType(MediaType.APPLICATION_JSON)
+        ResultActions result = mockMvc.perform(post("/api/v1/products")
+                .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         );
 
         //then
         result.andExpectAll(
                 status().isCreated(),
-                content().contentType(MediaType.APPLICATION_JSON),
+                content().contentType(APPLICATION_JSON),
                 header().exists("Location"),
-                header().string("Location", notNullValue()),
+                header().string("Location", containsString("api/v1/products/")),
                 jsonPath("$.id", notNullValue()),
                 jsonPath("$.title", is(request.title())),
                 jsonPath("$.details", is(request.details()))
         );
+
+        assertThat(productRepository.count()).isOne();
     }
 
     @Test
-    @DisplayName("Test create product functionality with invalid createProductRequest")
+    @DisplayName("Should return status 400 BAD REQUEST and error response when creating product with invalid request")
     public void givenInvalidCreateProductRequest_whenCreateProduct_thenReturnStatusBadRequestAndErrorResponseAsBody() throws Exception {
         //given
-        CreateProductRequest request = new CreateProductRequest("Title", "");
+        CreateProductRequest invalidRequest = new CreateProductRequest("Title", "");
+
+        String expectedFieldErrorMessage = "details не должно быть пустым";
 
         //when
-        ResultActions result = mockMvc.perform(post("http://localhost:8080/api/v1/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
+        ResultActions result = mockMvc.perform(post("/api/v1/products")
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidRequest))
+                .accept(APPLICATION_JSON)
         );
 
         //then
         result.andExpectAll(
                 status().isBadRequest(),
-                content().contentType(MediaType.APPLICATION_JSON),
+                content().contentType(APPLICATION_JSON),
                 jsonPath("$.path").value("/api/v1/products"),
-                jsonPath("$.message", CoreMatchers.startsWith("Validation failed:")),
+                jsonPath("$.message", CoreMatchers.startsWith("Validation failed")),
+                jsonPath("$.message", containsString(expectedFieldErrorMessage)),
                 jsonPath("$.statusCode").value(BAD_REQUEST.value()),
                 jsonPath("$.timestamp", notNullValue())
         );
+
+        assertThat(productRepository.count()).isZero();
     }
 
     @Test
-    @DisplayName("Test get all products functionality when no product existed")
-    public void givenNoProductExists_whenGetAllProducts_thenReturnStatusOKAndEmptyListAsBody() throws Exception {
+    @DisplayName("Should return status 200 OK and empty paged response when getting all products paginated and no products exists")
+    public void givenNoProductExists_whenGetAllProductsPaginated_thenReturnStatusOKAndEmptyPagedResponse() throws Exception {
         //given
+        int pageNumber = 0;
+        int pageSize = 10;
+
+        assertThat(productRepository.count()).isZero();
 
         //when
         ResultActions result = mockMvc.perform(get("/api/v1/products")
-                .contentType(MediaType.APPLICATION_JSON)
+                .param("page", String.valueOf(pageNumber))
+                .param("size", String.valueOf(pageSize))
+                .accept(APPLICATION_JSON)
         );
 
         //then
         result.andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON),
-                jsonPath("$").isEmpty()
+                jsonPath("$.pageNumber",is(pageNumber)),
+                jsonPath("$.pageSize",is(pageSize)),
+                jsonPath("$.totalElements",is(0)),
+                jsonPath("$.totalPages",is(0)),
+                jsonPath("$.first", is(TRUE)),
+                jsonPath("$.last", is(TRUE)),
+                jsonPath("$.content").isArray(),
+                jsonPath("$.content").isEmpty()
         );
     }
 
     @Test
-    @DisplayName("Test get all product functionality when ony one product existed")
-    public void givenOneProductExists_whenGetAllProducts_thenReturnStatusOkAndListWithOneProductDtoAsBody() throws Exception {
+    @DisplayName("Should return status 200 OK and paged response with single product DTO when getting all product paginated and one product exists")
+    public void givenOneProductExists_whenGetAllProductsPaginated_thenReturnStatusOkAndPagedResponseWithOneProductDtoAsBody() throws Exception {
         //given
-        Product product = TestUtils.getProductMilkTransient();
-        productRepository.save(product);
+        int pageNumber = 0;
+        int pageSize = 10;
+        Product productMilkTransient = TestUtils.getProductMilkTransient();
+        Product productMilkPersisted = productRepository.save(productMilkTransient);
+
+        assertThat(productRepository.count()).isOne();
 
         //when
         ResultActions result = mockMvc.perform(get("/api/v1/products")
-                .contentType(MediaType.APPLICATION_JSON)
+                .param("page", String.valueOf(pageNumber))
+                .param("size", String.valueOf(pageSize))
+                .accept(APPLICATION_JSON)
         );
 
         //then
         result.andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON),
-                jsonPath("$", hasSize(1)),
-                jsonPath("$[0].id", notNullValue()),
-                jsonPath("$[0].title", is(product.getTitle())),
-                jsonPath("$[0].details", is(product.getDetails()))
+                jsonPath("$.pageNumber",is(pageNumber)),
+                jsonPath("$.pageSize",is(pageSize)),
+                jsonPath("$.totalElements",is(1)),
+                jsonPath("$.totalPages",is(1)),
+                jsonPath("$.first", is(TRUE)),
+                jsonPath("$.last", is(TRUE)),
+                jsonPath("$.content").isArray(),
+                jsonPath("$.content").isNotEmpty(),
+                jsonPath("$.content.size()", is(1)),
+                jsonPath("$.content[0].id", is(productMilkPersisted.getId().toString())),
+                jsonPath("$.content[0].title", is(productMilkPersisted.getTitle())),
+                jsonPath("$.content[0].details", is(productMilkPersisted.getDetails()))
         );
     }
 
     @Test
-    @DisplayName("Test get all products functionality when many product existed")
+    @DisplayName("Should return status 200 OK and paged response with products when getting all products paginated and many products exists")
     public void givenManyProductExisted_whenGetAllProducts_thenReturnStatusOKAndListOfProductDtosAsBody() throws Exception {
         //given
-        Product productMilk = TestUtils.getProductMilkTransient();
-        Product productButter = TestUtils.getProductButterTransient();
-        Product productCottage = TestUtils.getProductCottageTransient();
-        productRepository.saveAll(List.of(productMilk, productButter, productCottage));
+        int pageNumber = 0;
+        int pageSize = 10;
+        Product productMilkTransient = TestUtils.getProductMilkTransient();
+        Product productButterTransient = TestUtils.getProductButterTransient();
+        Product productCottageTransient = TestUtils.getProductCottageTransient();
+        Product productMilkPersisted = productRepository.save(productMilkTransient);
+        Product productButterPersisted = productRepository.save(productButterTransient);
+        Product productCottagePersisted = productRepository.save(productCottageTransient);
+
+        assertThat(productRepository.count()).isEqualTo(3);
 
         //when
         ResultActions result = mockMvc.perform(get("/api/v1/products")
-                .contentType(MediaType.APPLICATION_JSON)
+                .param("page", String.valueOf(pageNumber))
+                .param("size", String.valueOf(pageSize))
+                .accept(APPLICATION_JSON)
         );
 
         //then
         result.andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON),
-                jsonPath("$", hasSize(3)),
+                jsonPath("$.pageNumber",is(pageNumber)),
+                jsonPath("$.pageSize",is(pageSize)),
+                jsonPath("$.pageNumber",is(pageNumber)),
+                jsonPath("$.totalElements",is(3)),
+                jsonPath("$.totalPages",is(1)),
+                jsonPath("$.first", is(TRUE)),
+                jsonPath("$.last", is(TRUE)),
+                jsonPath("$.content").isArray(),
+                jsonPath("$.content").isNotEmpty(),
+                jsonPath("$.content.size()", is(3)),
+                jsonPath("$.content[*].id", containsInAnyOrder(
+                        productMilkPersisted.getId().toString(),
+                        productButterPersisted.getId().toString(),
+                        productCottagePersisted.getId().toString()
+                )),
+                jsonPath("$.content[*].title", containsInAnyOrder(
+                        productMilkPersisted.getTitle(),
+                        productButterPersisted.getTitle(),
+                        productCottagePersisted.getTitle()
 
-                jsonPath("$[0].id", notNullValue()),
-//                jsonPath("$[0].title").value(milkDto.title()),
-//                jsonPath("$[0].details").value(milkDto.details()),
-
-                jsonPath("$[1].id", notNullValue()),
-//                jsonPath("$[1].title").value(butterDto.title()),
-//                jsonPath("$[1].details").value(butterDto.details()),
-
-                jsonPath("$[2].id", notNullValue())
-//                jsonPath("$[2].title").value(cottageDto.title()),
-//                jsonPath("$[2].details").value(cottageDto.details())
+                )),
+                jsonPath("$.content[*].details", containsInAnyOrder(
+                        productCottagePersisted.getDetails(),
+                        productMilkPersisted.getDetails(),
+                        productButterPersisted.getDetails()
+                ))
         );
-
     }
 
     @Test
-    @DisplayName("Test get product by id functionality with existent product id")
+    @DisplayName("Should return status 200 OK and product DTO when getting product with existent id")
     public void givenExistentProductId_whenGetProduct_thenReturnStatusOKAndProductDtoAsBody() throws Exception {
         //given
-        Product product = TestUtils.getProductCottageTransient();
-        Product savedProduct = productRepository.save(product);
-        UUID existentProductId = savedProduct.getId();
+        Product productMilkTransient = TestUtils.getProductMilkTransient();
+        Product productMilkPersisted = productRepository.save(productMilkTransient);
+        UUID existentProductId = productMilkPersisted.getId();
+
+        assertThat(productRepository.existsById(existentProductId)).isTrue();
 
         //when
         ResultActions result = mockMvc.perform(get("/api/v1/products/{productId}", existentProductId)
-                .contentType(MediaType.APPLICATION_JSON)
+                .accept(APPLICATION_JSON)
         );
 
         //then
         result.andExpectAll(
                 status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON),
-                jsonPath("$.id", notNullValue()),
-                jsonPath("$.title", is(product.getTitle())),
-                jsonPath("$.details", is(product.getDetails()))
+                content().contentType(APPLICATION_JSON),
+                jsonPath("$.id", is(productMilkPersisted.getId().toString())),
+                jsonPath("$.title", is(productMilkPersisted.getTitle())),
+                jsonPath("$.details", is(productMilkPersisted.getDetails()))
         );
     }
 
     @Test
-    @DisplayName("Test get product by id functionality with not existent product id")
+    @DisplayName("Should return status 404 NOT FOUND and error response when getting product with not existent id")
     public void givenNotExistentProductId_whenGetProduct_thenReturnStatusNotFoundAndErrorResponseAsBody() throws Exception {
         //given
         UUID notExistentProductId = UUID.randomUUID();
+        String expectedExceptionMessage = PRODUCT_NOT_FOUND_WITH_ID.formatted(notExistentProductId);
+
+        assertThat(productRepository.existsById(notExistentProductId)).isFalse();
 
         //when
         ResultActions result = mockMvc.perform(get("/api/v1/products/{productId}", notExistentProductId)
-                .contentType(MediaType.APPLICATION_JSON)
+                .accept(APPLICATION_JSON)
         );
 
         //then
         result.andExpectAll(
                 status().isNotFound(),
-                content().contentType(MediaType.APPLICATION_JSON),
+                content().contentType(APPLICATION_JSON),
                 jsonPath("$.path").value("/api/v1/products/" + notExistentProductId),
-                jsonPath("$.message").value(PRODUCT_NOT_FOUND_WITH_ID.formatted(notExistentProductId)),
+                jsonPath("$.message").value(expectedExceptionMessage),
                 jsonPath("$.statusCode").value(NOT_FOUND.value()),
                 jsonPath("$.timestamp", notNullValue())
         );
     }
 
     @Test
-    @DisplayName("Test update product by id functionality with existent product id and valid updateProductRequest")
+    @DisplayName("Should return status 204 NO CONTENT when updating product with existent id and valid request")
     public void givenExistentProductIdAndValidUpdateProductRequest_whenUpdateProduct_thenReturnNoContentStatus() throws Exception {
         //given
-        Product product = TestUtils.getProductMilkTransient();
-        Product savedProduct = productRepository.save(product);
-        UUID existentProductId = savedProduct.getId();
+        Product productMilkTransient = TestUtils.getProductMilkTransient();
+        Product productMilkPersisted = productRepository.save(productMilkTransient);
+        UUID existentProductId = productMilkPersisted.getId();
+
         UpdateProductRequest request = TestUtils.getUpdateProductMilkRequest();
+
+        assertThat(productRepository.existsById(existentProductId)).isTrue();
 
         //when
         ResultActions result = mockMvc.perform(put("/api/v1/products/{productId}", existentProductId)
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         );
 
         //then
         result.andExpectAll(
-                status().isNoContent()
+                status().isNoContent(),
+                content().string("")
         );
+
+        assertThat(productRepository.existsById(existentProductId)).isTrue();
+        Optional<Product> obtainedProductOptional = productRepository.findById(existentProductId);
+        assertThat(obtainedProductOptional).isPresent();
+        Product obtainedProduct = obtainedProductOptional.get();
+        assertThat(obtainedProduct.getTitle()).isEqualTo(request.title());
+        assertThat(obtainedProduct.getDetails()).isEqualTo(request.details());
     }
 
     @Test
-    @DisplayName("Test update product by id functionality with not existent product id and valid updateProductRequest")
+    @DisplayName("Should return status 404 NOT FOUND and error response when updating product with not existent id and valid request")
     public void givenNotExistentProductIdAndValidUpdateProductRequest_whenUpdateProduct_thenReturnStatusNotFoundAndErrorResponseAsBody() throws Exception {
         //given
         UUID notExistentProductId = UUID.randomUUID();
         UpdateProductRequest request = TestUtils.getUpdateProductMilkRequest();
+        String expectedExceptionMessage = PRODUCT_NOT_FOUND_WITH_ID.formatted(notExistentProductId);
+
+        assertThat(productRepository.existsById(notExistentProductId)).isFalse();
 
         //when
         ResultActions result = mockMvc.perform(put("/api/v1/products/{productId}", notExistentProductId)
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         );
 
         //then
         result.andExpectAll(
                 status().isNotFound(),
-                content().contentType(MediaType.APPLICATION_JSON),
+                content().contentType(APPLICATION_JSON),
                 jsonPath("$.path").value("/api/v1/products/" + notExistentProductId),
-                jsonPath("$.message").value(PRODUCT_NOT_FOUND_WITH_ID.formatted(notExistentProductId)),
+                jsonPath("$.message").value(expectedExceptionMessage),
                 jsonPath("$.statusCode").value(NOT_FOUND.value()),
-                jsonPath("$.timestamp", notNullValue())
+                jsonPath("$.timestamp").exists()
         );
     }
 
     @Test
-    @DisplayName("Test update product by id functionality with product id and invalid updateProductRequest")
+    @DisplayName("Should return status 400 BAD REQUEST and error response when updating product with existent id and invalid request")
     public void givenExistentProductIdAndInvalidUpdateProductRequest_whenUpdateProduct_thenReturnStatusBadRequestAndErrorResponseAsBody() throws Exception {
         //given
-        Product product = TestUtils.getProductMilkTransient();
-        Product savedProduct = productRepository.save(product);
-        UUID existentProductId = savedProduct.getId();
-        UpdateProductRequest request = new UpdateProductRequest("new Title", "");
+        Product productMilkTransient = TestUtils.getProductMilkTransient();
+        Product productMilkPersisted = productRepository.save(productMilkTransient);
+        UUID existentProductId = productMilkPersisted.getId();
+
+        UpdateProductRequest invalidRequest = new UpdateProductRequest("new Title", "");
+
+        assertThat(productRepository.existsById(existentProductId)).isTrue();
 
         //when
         ResultActions result = mockMvc.perform(put("/api/v1/products/{productId}", existentProductId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidRequest))
         );
 
         //then
         result.andExpectAll(
                 status().isBadRequest(),
-                content().contentType(MediaType.APPLICATION_JSON),
+                content().contentType(APPLICATION_JSON),
                 jsonPath("$.path").value("/api/v1/products/" + existentProductId),
                 jsonPath("$.message", CoreMatchers.startsWith("Validation failed:")),
                 jsonPath("$.statusCode").value(BAD_REQUEST.value()),
                 jsonPath("$.timestamp", notNullValue())
         );
+
+        assertThat(productRepository.existsById(existentProductId)).isTrue();
+        Optional<Product> obtainedProductOptional = productRepository.findById(existentProductId);
+        assertThat(obtainedProductOptional).isPresent();
+        Product obtainedProduct = obtainedProductOptional.get();
+        assertThat(obtainedProduct).usingRecursiveComparison().isEqualTo(productMilkPersisted);
     }
 
     @Test
-    @DisplayName("Test update product by id functionality with product id and invalid updateProductRequest")
+    @DisplayName("Should return status 400 BAD REQUEST and error response when updating product with not existent id and invalid request")
     public void givenNotExistentProductIdAndInvalidUpdateProductRequest_whenUpdateProduct_thenReturnStatusBadRequestAndErrorResponseAsBody() throws Exception {
         //given
         UUID notExistentProductId = UUID.randomUUID();
-        UpdateProductRequest request = new UpdateProductRequest("new Title", "");
+        UpdateProductRequest invalidRequest = new UpdateProductRequest("new Title", "");
+
+        assertThat(productRepository.existsById(notExistentProductId)).isFalse();
 
         //when
         ResultActions result = mockMvc.perform(put("/api/v1/products/{productId}", notExistentProductId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidRequest))
         );
 
         //then
         result.andExpectAll(
                 status().isBadRequest(),
-                content().contentType(MediaType.APPLICATION_JSON),
+                content().contentType(APPLICATION_JSON),
                 jsonPath("$.path").value("/api/v1/products/" + notExistentProductId),
                 jsonPath("$.message", CoreMatchers.startsWith("Validation failed:")),
                 jsonPath("$.statusCode").value(BAD_REQUEST.value()),
@@ -315,42 +401,47 @@ public class ItProductRestControllerTests extends AbstractRestControllerBaseTest
     }
 
     @Test
-    @DisplayName("Test delete product by id functionality with existent product id")
+    @DisplayName("Should return status 204 NO CONTENT when deleting product with existent id")
     public void givenExistentProductId_whenDeleteProduct_thenReturnNoContentStatus() throws Exception {
         //given
-        Product product = TestUtils.getProductMilkTransient();
-        Product savedProduct = productRepository.save(product);
-        UUID existentProductId = savedProduct.getId();
+        Product productMilkTransient = TestUtils.getProductMilkTransient();
+        Product productMilkPersisted = productRepository.save(productMilkTransient);
+        UUID existentProductId = productMilkPersisted.getId();
+
+        assertThat(productRepository.existsById(existentProductId)).isTrue();
 
         //when
         ResultActions result = mockMvc.perform(delete("/api/v1/products/{productId}", existentProductId)
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
         );
 
         //then
-        Product obtainedProduct = productRepository.findById(existentProductId).orElse(null);
-        assertThat(obtainedProduct).isNull();
-
         result.andExpect(status().isNoContent());
+
+        assertThat(productRepository.existsById(existentProductId)).isFalse();
+        assertThat(productRepository.findById(existentProductId)).isNotPresent();
     }
 
     @Test
-    @DisplayName("Test delete product by id functionality with not existent product id")
+    @DisplayName("Should return status 404 NOT FOUND and error response when deleting product with not existent id")
     public void givenNotExistentProductId_whenDeleteProduct_thenReturnStatusNotFoundAndErrorResponseAsBody() throws Exception {
         //given
         UUID notExistentProductId = UUID.randomUUID();
+        String expectedExceptionMessage = PRODUCT_NOT_FOUND_WITH_ID.formatted(notExistentProductId);
+
+        assertThat(productRepository.existsById(notExistentProductId)).isFalse();
 
         //when
         ResultActions result = mockMvc.perform(delete("/api/v1/products/{productId}", notExistentProductId)
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
         );
 
         //then
         result.andExpectAll(
                 status().isNotFound(),
-                content().contentType(MediaType.APPLICATION_JSON),
+                content().contentType(APPLICATION_JSON),
                 jsonPath("$.path").value("/api/v1/products/" + notExistentProductId),
-                jsonPath("$.message").value(PRODUCT_NOT_FOUND_WITH_ID.formatted(notExistentProductId)),
+                jsonPath("$.message").value(expectedExceptionMessage),
                 jsonPath("$.statusCode").value(NOT_FOUND.value()),
                 jsonPath("$.timestamp", notNullValue())
         );

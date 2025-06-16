@@ -1,7 +1,7 @@
 package ru.ivanov.productservice.service.impl;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.ivanov.productservice.exception.ResourceNotFoundException;
@@ -42,8 +42,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<ProductDto> getAllProductsPaginated(Pageable pageable) {
-        Page<Product> page = productRepository.findAll(pageable);
+    public PagedResponse<ProductDto> getAllProductsPaginated(int pageNumber, int pageSize) {
+        Page<Product> page = productRepository.findAll(PageRequest.of(pageNumber, pageSize));
         return PagedResponse.fromPage(page.map(productMapper::toDto));
     }
 
