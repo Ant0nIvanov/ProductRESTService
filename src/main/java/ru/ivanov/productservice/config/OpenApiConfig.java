@@ -14,7 +14,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(
                         new Info()
-                                .contact(new Contact().name("Anton Ivanov"))
+                                .contact(new Contact().name("Anton Ivanov").url("https://github.com/Ant0nIvanov"))
                                 .title("Product Service API")
                                 .description("OpenAPI Documentation for Product Service")
                                 .version("1.0.0")
