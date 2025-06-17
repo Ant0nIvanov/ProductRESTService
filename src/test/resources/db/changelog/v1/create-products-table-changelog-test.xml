@@ -4,7 +4,7 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <changeSet id="create-products-table" author="Anton Ivanov">
+    <changeSet id="create-products-table-test" author="Anton Ivanov">
         <preConditions onFail="CONTINUE" onFailMessage="Table products already exists">
             <not>
                 <tableExists tableName="products"/>
