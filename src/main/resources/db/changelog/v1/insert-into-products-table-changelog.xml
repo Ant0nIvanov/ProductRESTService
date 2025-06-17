@@ -4,8 +4,29 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <changeSet id="insert-into-products-table" author="Anton Ivanov">
-        <sqlFile path="insert-into-products-table.sql" relativeToChangelogFile="true"/>
+    <changeSet id="insert-data-into-products-table-v1" author="Anton Ivanov">
+        <preConditions onFail="CONTINUE" onFailMessage="Table products already exists or table is not empty">
+            <tableExists tableName="products"/>
+            <tableIsEmpty tableName="products"/>
+        </preConditions>
+
+        <loadData
+                tableName="products"
+                file="data/products-table-data.csv"
+                relativeToChangelogFile="true"
+                separator=","
+                encoding="UTF-8">
+
+            <column name="id" type="uuid"/>
+            <column name="title" type="string"/>
+            <column name="details" type="string"/>
+        </loadData>
+
+        <rollback>
+            <sql>
+                truncate table products
+            </sql>
+        </rollback>
     </changeSet>
 
 </databaseChangeLog>
